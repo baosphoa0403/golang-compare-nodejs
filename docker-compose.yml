@@ -23,6 +23,7 @@ services:
     cpus: 1.0
     volumes:
       - ./app-golang:/usr/src/app # Mount thư mục app-golang vào container
+      - ./data:/usr/src/app/data
     networks:
       - app-network
 
