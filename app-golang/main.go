@@ -1,11 +1,9 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/xuri/excelize/v2"
@@ -19,9 +17,14 @@ func writeJSON(w http.ResponseWriter, v interface{}) {
 	json.NewEncoder(w).Encode(v)
 }
 
+// Helper: convert duration → giây có 3 số thập phân
+func durationInSeconds(start time.Time) string {
+	secs := time.Since(start).Seconds()
+	return fmt.Sprintf("%.3fs", secs)
+}
+
 // ========== CASE 0: Hello ==========
 func meHandler(w http.ResponseWriter, r *http.Request) {
-	// Giả lập async như setTimeout 0 trong Node
 	go func() {
 		fmt.Println("set timeout 0s")
 	}()
@@ -34,16 +37,15 @@ func hashPasswordSyncHandler(w http.ResponseWriter, r *http.Request) {
 	password := "thisIsASecurePassword123"
 
 	hashed, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	duration := time.Since(start)
 
 	writeJSON(w, Response{
 		"result":         "Hash completed (sync)",
 		"hashedPassword": string(hashed),
-		"duration":       duration.String(),
+		"duration":       durationInSeconds(start),
 	})
 }
 
-// ========== CASE 2: Hash password with goroutine (simulate worker pool) ==========
+// ========== CASE 2: Hash password with goroutine ==========
 func hashPasswordWorkerHandler(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	password := "thisIsASecurePassword123"
@@ -55,12 +57,11 @@ func hashPasswordWorkerHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	hashed := <-ch
-	duration := time.Since(start)
 
 	writeJSON(w, Response{
 		"result":         "Hash completed (goroutine worker)",
 		"hashedPassword": hashed,
-		"duration":       duration.String(),
+		"duration":       durationInSeconds(start),
 	})
 }
 
@@ -73,7 +74,7 @@ func excelSmallHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, Response{
 		"case":     "Small Excel",
 		"rows":     len(rows),
-		"duration": time.Since(start).String(),
+		"duration": durationInSeconds(start),
 	})
 }
 
@@ -85,16 +86,28 @@ func excelMediumHandler(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, Response{
 		"case":     "Medium Excel",
-		"duration": time.Since(start).String(),
 		"rows":     len(rows),
+		"duration": durationInSeconds(start),
 	})
 }
 
 // ========== CASE 5: Stream large Excel ==========
 func excelLargeHandler(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-	f, _ := excelize.OpenFile("./data/large.xlsx")
-	rows, _ := f.Rows("Sheet1")
+
+	f, err := excelize.OpenFile("./data/large.xlsx")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+
+	rows, err := f.Rows("Sheet1")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
 
 	count := 0
 	for rows.Next() {
@@ -103,39 +116,8 @@ func excelLargeHandler(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, Response{
 		"case":     "Large Excel Streaming",
-		"duration": time.Since(start).String(),
 		"rows":     count,
-	})
-}
-
-// ========== CASE 6: Validate + Insert DB ==========
-func excelValidateInsertHandler(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-	db, _ := sql.Open("postgres", "postgres://user:pass@localhost:5432/benchmark?sslmode=disable")
-	defer db.Close()
-
-	f, _ := excelize.OpenFile("./data/import.xlsx")
-	rows, _ := f.Rows("Sheet1")
-
-	inserted := 0
-	for rows.Next() {
-		row, _ := rows.Columns()
-		if len(row) < 2 {
-			continue
-		}
-		name := row[0]
-		email := row[1]
-		if !strings.Contains(email, "@") {
-			continue
-		}
-		_, _ = db.Exec("INSERT INTO users (name, email) VALUES ($1, $2)", name, email)
-		inserted++
-	}
-
-	writeJSON(w, Response{
-		"case":     "Validate + Insert",
-		"inserted": inserted,
-		"duration": time.Since(start).String(),
+		"duration": durationInSeconds(start),
 	})
 }
 
@@ -146,7 +128,6 @@ func main() {
 	http.HandleFunc("/excel-small", excelSmallHandler)
 	http.HandleFunc("/excel-medium", excelMediumHandler)
 	http.HandleFunc("/excel-large", excelLargeHandler)
-	http.HandleFunc("/excel-validate-insert", excelValidateInsertHandler)
 
 	fmt.Println("Go server is running at http://localhost:8888")
 	if err := http.ListenAndServe(":8888", nil); err != nil {

@@ -5,8 +5,8 @@ services:
       context: ./app-node # Thư mục chứa Dockerfile cho Node.js
     ports:
       - "3000:3000" # Cổng container Node.js sẽ chạy trên cổng 3000
-    mem_limit: 1g # Giới hạn bộ nhớ 1GB
-    cpus: 1.0
+    mem_limit: 3g # Giới hạn bộ nhớ 1GB
+    cpus: 2.0
     volumes:
       - ./app-node:/usr/src/app # Mount thư mục app-node vào container
       - /usr/src/app/node_modules
@@ -19,8 +19,8 @@ services:
       context: ./app-golang # Thư mục chứa Dockerfile cho Go
     ports:
       - "8888:8888" # Cổng container Go sẽ chạy trên cổng 8080
-    mem_limit: 1g # Giới hạn bộ nhớ 1GB
-    cpus: 1.0
+    mem_limit: 3g # Giới hạn bộ nhớ 1GB
+    cpus: 2.0
     volumes:
       - ./app-golang:/usr/src/app # Mount thư mục app-golang vào container
       - ./data:/usr/src/app/data

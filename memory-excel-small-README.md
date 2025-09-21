@@ -1,4 +1,4 @@
-# 📊 Benchmark Report: Excel Small (Node.js vs Go)
+# 📊 Benchmark Report: Excel Small (Node.js vs Go) (In-Memory Read)
 
 ## 1. Giới thiệu
 
@@ -26,15 +26,16 @@ Mục tiêu: đo **tốc độ đọc** và **số dòng xử lý** cho file có
 
 - **Node.js**
   ```json
-  { "case": "Small Excel", "rows": 50001, "duration": "1890ms" }
+  { "case": "Small Excel", "rows": 50001, "duration": "0.701s" }
   ```
 - **Golang**
   ```json
-  { "case": "Small Excel", "rows": 50001, "duration": "514.636292ms" }
+  { "case": "Small Excel", "rows": 50001, "duration": "0.421s" }
   ```
+
 ## 4. Phân tích
 
-| Tiêu chí              | Golang (excelize)                        | Node.js (exceljs)                                  |
-|-----------------------|-------------------------------------------|---------------------------------------------------|
-| **Hiệu năng**         | Nhanh hơn ~3.7 lần                       | Chậm hơn, dễ nghẽn khi nhiều request              |
-| **Thư viện**          | Native code, tối ưu I/O & bộ nhớ          | JavaScript thuần, overhead từ Garbage Collector   |
+| Tiêu chí      | Golang (excelize)                | Node.js (exceljs)                               |
+| ------------- | -------------------------------- | ----------------------------------------------- |
+| **Hiệu năng** | Nhanh hơn ~3.7 lần               | Chậm hơn, dễ nghẽn khi nhiều request            |
+| **Thư viện**  | Native code, tối ưu I/O & bộ nhớ | JavaScript thuần, overhead từ Garbage Collector |
